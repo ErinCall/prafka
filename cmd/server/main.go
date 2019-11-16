@@ -4,6 +4,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+
+	"github.com/erincall/prafka/internal/api"
 )
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
@@ -17,5 +19,6 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	http.HandleFunc("/status", statusHandler)
+	http.HandleFunc("/api/send", api.SendHandler)
 	log.Fatal(http.ListenAndServe("localhost:8000", nil))
 }
