@@ -9,14 +9,14 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/erincall/prafka/internal/config"
 )
 
 type sendBody struct {
 	Topic   string `json:"topic"`
 	Message string `json:"message"`
 }
-
-var brokerlist = []string{"localhost:32769"}
 
 func SendHandler(w http.ResponseWriter, r *http.Request) {
 	_ = fmt.Println // May want fmt around for stdout debugging, so let it stay in the import list
@@ -53,7 +53,7 @@ func SendHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: ctx = context.WithTimeout(ctx, ...)
 
 	kw := kafka.NewWriter(kafka.WriterConfig{
-		Brokers:  brokerlist,
+		Brokers:  config.BrokerList,
 		Topic:    body.Topic,
 		Balancer: &kafka.LeastBytes{},
 	})

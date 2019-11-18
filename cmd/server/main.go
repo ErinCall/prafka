@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -20,5 +21,8 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	http.HandleFunc("/status", statusHandler)
 	http.HandleFunc("/api/send", api.SendHandler)
-	log.Fatal(http.ListenAndServe("localhost:8000", nil))
+	http.HandleFunc("/api/read", api.ReadHandler)
+	host := "localhost:8000"
+	fmt.Printf("Now listening on %s\n", host)
+	log.Fatal(http.ListenAndServe(host, nil))
 }
