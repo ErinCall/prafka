@@ -14,7 +14,7 @@ import (
 	"github.com/erincall/prafka/internal/config"
 )
 
-type requestParams struct {
+type readParams struct {
 	Topic       string `schema:"topic,required"`
 	Offset      int64  `schema:"offset"`
 	MaxMessages int    `schema:"max"`
@@ -39,7 +39,7 @@ func ReadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	decoder := schema.NewDecoder()
-	var params requestParams
+	var params readParams
 	err = decoder.Decode(&params, r.URL.Query())
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
