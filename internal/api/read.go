@@ -3,15 +3,20 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"github.com/gorilla/schema"
 	"github.com/pkg/errors"
 	kafka "github.com/segmentio/kafka-go"
 	"io"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/erincall/prafka/internal/config"
 )
+
+type requestParams struct {
+	Topic  string `schema:"topic,required"`
+	Offset int64  `schema:"offset"`
+}
 
 type response struct {
 	Topic     string `json:"topic"`
@@ -31,24 +36,13 @@ func ReadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	topics, ok := r.URL.Query()["topic"]
-	if !ok || len(topics) != 1 {
+	decoder := schema.NewDecoder()
+	var params requestParams
+	err = decoder.Decode(&params, r.URL.Query())
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		io.WriteString(w, "Must provide exactly one topic")
+		io.WriteString(w, errors.Wrap(err, "malformed request query").Error())
 		return
-	}
-	topic := topics[0]
-
-	offset := int64(0)
-	offsets, ok := r.URL.Query()["offset"]
-	if ok && len(offsets) > 0 {
-		// Could throw an error on offsets > 1, but we have enough to return something, so...eh
-		offset, err = strconv.ParseInt(offsets[0], 0, 64)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			io.WriteString(w, errors.Wrap(err, "offset parameter must be an integer").Error())
-			return
-		}
 	}
 
 	ctx := context.Background()
@@ -56,12 +50,12 @@ func ReadHandler(w http.ResponseWriter, r *http.Request) {
 
 	kr := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:   config.BrokerList,
-		Topic:     topic,
+		Topic:     params.Topic,
 		Partition: 0,
 		MinBytes:  10,
 		MaxBytes:  10e6, // 10 MB
 	})
-	kr.SetOffset(offset)
+	kr.SetOffset(params.Offset)
 
 	mChan := make(chan kafka.Message)
 	eChan := make(chan error)
