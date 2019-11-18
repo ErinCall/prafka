@@ -63,13 +63,13 @@ func ReadHandler(w http.ResponseWriter, r *http.Request) {
 
 	go readMessages(ctx, kr, mChan, eChan)
 
-	messages := make([]kafka.Message, 0)
+	responses := make([]response, 0)
 ReadLoop:
 	for {
 		select {
 		case m := <-mChan:
-			messages = append(messages, m)
-			if len(messages) >= params.MaxMessages {
+			responses = append(responses, formatMessage(m))
+			if len(responses) >= params.MaxMessages {
 				break ReadLoop
 			}
 		case err = <-eChan:
@@ -82,11 +82,6 @@ ReadLoop:
 		case <-ctx.Done():
 			break ReadLoop
 		}
-	}
-
-	responses := make([]response, 0)
-	for _, msg := range messages {
-		responses = append(responses, formatMessage(msg))
 	}
 
 	resBody, err := json.Marshal(responses)
