@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/schema"
 	"github.com/pkg/errors"
 	kafka "github.com/segmentio/kafka-go"
@@ -33,7 +34,7 @@ func ReadHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	if r.Method != "GET" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		io.WriteString(w, "GET-only endpoint")
+		io.WriteString(w, `{"error": "GET-only endpoint"}`)
 		return
 	}
 
@@ -42,7 +43,8 @@ func ReadHandler(w http.ResponseWriter, r *http.Request) {
 	err = decoder.Decode(&params, r.URL.Query())
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		io.WriteString(w, errors.Wrap(err, "malformed request query").Error())
+		io.WriteString(w, fmt.Sprintf(`{"error": "%s"}`,
+			errors.Wrap(err, "malformed request query")))
 		return
 	}
 
@@ -75,7 +77,8 @@ ReadLoop:
 		case err = <-eChan:
 			if errors.Cause(err) != context.DeadlineExceeded {
 				w.WriteHeader(http.StatusInternalServerError)
-				io.WriteString(w, errors.Wrap(err, "error reading from kafka").Error())
+				io.WriteString(w, fmt.Sprintf(`{"error": "%s"}`,
+					errors.Wrap(err, "error reading from kafka")))
 				return
 			}
 			break ReadLoop
@@ -88,7 +91,8 @@ ReadLoop:
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		io.WriteString(w, errors.Wrap(err, "could not json-serialize response").Error())
+		io.WriteString(w, fmt.Sprintf(`{"error": "%s"}`,
+			errors.Wrap(err, "could not json-serialize response")))
 		return
 	}
 
