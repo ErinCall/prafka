@@ -14,8 +14,9 @@ import (
 )
 
 type requestParams struct {
-	Topic  string `schema:"topic,required"`
-	Offset int64  `schema:"offset"`
+	Topic       string `schema:"topic,required"`
+	Offset      int64  `schema:"offset"`
+	MaxMessages int    `schema:"max"`
 }
 
 type response struct {
@@ -68,9 +69,9 @@ ReadLoop:
 		select {
 		case m := <-mChan:
 			messages = append(messages, m)
-			/*
-				TODO: if len(messages) > req.Query()["maxMessages"] {break}
-			*/
+			if len(messages) >= params.MaxMessages {
+				break ReadLoop
+			}
 		case err = <-eChan:
 			if errors.Cause(err) != context.DeadlineExceeded {
 				w.WriteHeader(http.StatusInternalServerError)
