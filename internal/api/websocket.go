@@ -10,6 +10,7 @@ import (
 	kafka "github.com/segmentio/kafka-go"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/erincall/prafka/internal/config"
@@ -26,6 +27,10 @@ type message struct {
 	Offset    int64  `json:"offset"`
 	Value     string `json:"value"`
 	Time      string `json:"time"`
+}
+
+type errRes struct {
+	Error string `json:"error"`
 }
 
 var (
@@ -45,32 +50,31 @@ func WebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	decoder := schema.NewDecoder()
-	var params wsParams
-	err = decoder.Decode(&params, r.URL.Query())
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(http.StatusBadRequest)
-		io.WriteString(w, errors.Wrap(err, "malformed request query").Error())
-		return
-	}
-
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		fmt.Println(errors.Wrap(err, "could not upgrade to websocket connection").Error())
 		return
 	}
 
-	go serveWebsocket(params, conn)
+	go serveWebsocket(r.URL.Query(), conn)
 }
 
-func serveWebsocket(params wsParams, conn *websocket.Conn) {
+func serveWebsocket(q url.Values, conn *websocket.Conn) {
 	ctx, cancel := context.WithCancel(context.Background())
 	// Ticker will be used to send keepalive pings. 10 seconds seems like a reasonable interval?
 	ticker := time.NewTicker(10 * time.Second)
 	defer cancel()
 	defer conn.Close()
 	defer ticker.Stop()
+
+	decoder := schema.NewDecoder()
+	var params wsParams
+
+	if err := decoder.Decode(&params, q); err != nil {
+		errMsg, _ := json.Marshal(errRes{errors.Wrap(err, "malformed query").Error()})
+		conn.WriteMessage(websocket.TextMessage, errMsg)
+		return
+	}
 
 	kr := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:   config.BrokerList,
@@ -101,7 +105,8 @@ func serveWebsocket(params wsParams, conn *websocket.Conn) {
 		case err := <-eChan:
 			errMsg := errors.Wrap(err, "error reading from Kafka").Error()
 			fmt.Println(errMsg)
-			conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(`{"error": "%s"}`, errMsg)))
+			res, _ := json.Marshal(errRes{errMsg})
+			conn.WriteMessage(websocket.TextMessage, res)
 			return
 		case <-ticker.C:
 			if err := conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
