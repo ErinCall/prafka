@@ -22,6 +22,7 @@ func main() {
 	http.HandleFunc("/status", statusHandler)
 	http.HandleFunc("/api/send", api.SendHandler)
 	http.HandleFunc("/api/read", api.ReadHandler)
+	http.HandleFunc("/api/websocket", api.WebsocketHandler)
 	host := "localhost:8000"
 	fmt.Printf("Now listening on %s\n", host)
 	log.Fatal(http.ListenAndServe(host, nil))

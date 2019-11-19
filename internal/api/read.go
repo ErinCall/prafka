@@ -14,7 +14,7 @@ import (
 	"github.com/erincall/prafka/internal/config"
 )
 
-type requestParams struct {
+type readParams struct {
 	Topic       string `schema:"topic,required"`
 	Offset      int64  `schema:"offset"`
 	MaxMessages int    `schema:"max"`
@@ -39,7 +39,7 @@ func ReadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	decoder := schema.NewDecoder()
-	var params requestParams
+	var params readParams
 	err = decoder.Decode(&params, r.URL.Query())
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -75,7 +75,7 @@ ReadLoop:
 				break ReadLoop
 			}
 		case err = <-eChan:
-			if errors.Cause(err) != context.DeadlineExceeded {
+			if !isContextErr(err) {
 				w.WriteHeader(http.StatusInternalServerError)
 				io.WriteString(w, fmt.Sprintf(`{"error": "%s"}`,
 					errors.Wrap(err, "error reading from kafka")))
@@ -114,8 +114,15 @@ func readMessages(ctx context.Context, kr *kafka.Reader, mChan chan kafka.Messag
 		m, err := kr.ReadMessage(ctx)
 		if err != nil {
 			eChan <- err
+			if isContextErr(err) {
+				return
+			}
 		} else {
 			mChan <- m
 		}
 	}
+}
+
+func isContextErr(err error) bool {
+	return errors.Cause(err) == context.Canceled || errors.Cause(err) == context.DeadlineExceeded
 }
