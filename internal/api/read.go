@@ -105,7 +105,7 @@ func formatMessage(msg kafka.Message) response { // ,error?
 		Partition: msg.Partition,
 		Offset:    msg.Offset,
 		Value:     string(msg.Value),
-		Time:      msg.Time.Format(time.RFC3339),
+		Time:      msg.Time.UTC().Format(time.RFC3339),
 	}
 }
 
