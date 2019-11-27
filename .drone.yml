@@ -1,0 +1,16 @@
+---
+kind: pipeline
+type: docker
+name: default
+
+steps:
+  - name: build
+    image: golang:1.13
+    commands:
+      - go build -o build/server cmd/server/main.go
+  - name: publish image
+    image: plugins/docker
+    settings:
+      registry: '192.168.0.17:5000'
+      repo: 192.168.0.17:5000/prafka
+      insecure: true
