@@ -11,6 +11,39 @@ steps:
   - name: publish image
     image: plugins/docker
     settings:
-      registry: '192.168.0.17:5000'
-      repo: 192.168.0.17:5000/prafka
+      registry: '192.168.2.85:5000'
+      repo: 192.168.2.85:5000/prafka
       insecure: true
+  - name: deploy
+    image: localhost:5000/drone-helm3
+    settings:
+      chart: ./helm/prafka
+      release: prafka
+      debug: true
+      helm_command: upgrade
+      namespace: erincall
+    environment:
+      API_SERVER: https://rancher.pelo.tech/k8s/clusters/c-25qdw
+      KUBERNETES_TOKEN: "[REDACTED]"
+      SKIP_TLS_VERIFY: true
+      SERVICE_ACCOUNT: erincall
+
+  # Spot's deploy code
+  # - name: deploy-tag
+  #   image: peloton/drone-helm:0.0.3
+  #   settings:
+  #     chart: ./helm/spot
+  #     update_dependencies: true
+  #     values:
+  #     - image.tag=${DRONE_TAG}
+  #     release: spot
+  #     namespace: classis
+  #     wait: true
+  #     timeout: 200
+  #   environment:
+  #     API_SERVER:
+  #       from_secret: api_server
+  #     KUBERNETES_TOKEN:
+  #       from_secret: kubernetes_token
+  #   when:
+  #     event: [ tag ]

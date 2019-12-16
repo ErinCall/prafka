@@ -1,0 +1,6 @@
+dependencies:
+- name: kafka
+  repository: https://kubernetes-charts.banzaicloud.com
+  version: 0.3.2
+digest: sha256:1901aadb04816618beb9165b45c82a4da50181888e252b78820f58e70699463b
+generated: "2019-12-02T10:50:41.945397-08:00"
